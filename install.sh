@@ -59,7 +59,8 @@ pip install -r requirements.txt
 echo ""
 echo -e "${BOLD}${YELLOW}⚙️ Please enter your 3xUI panel settings:${NC}"
 read -p "Panel IP address or domain (e.g. 192.168.1.100): " PANEL_IP
-read -p "Panel port (e.g. 2053): " PANEL_PORT
+read -p "Panel port (default: 2053): " PANEL_PORT
+PANEL_PORT=${PANEL_PORT:-2053}   # Set default if empty
 read -p "Web Base Path (e.g. /KqOZWNk3zx7VDf1pDS, or press Enter if none): " PANEL_PATH
 read -p "Username: " PANEL_USER
 read -s -p "Password: " PANEL_PASS
@@ -72,7 +73,7 @@ cat > .env <<EOF
 PANEL_BASE=https://${PANEL_IP}:${PANEL_PORT}${PANEL_PATH}
 USERNAME=${PANEL_USER}
 PASSWORD=${PANEL_PASS}
-CONFIG_FILE=${APP_DIR}/config.conf
+CONFIG_FILE=/etc/x3-traffic-reset/config.conf
 LOG_FILE=/var/log/x3-traffic-reset.log
 EOF
 
@@ -83,7 +84,7 @@ mkdir -p /etc/x3-traffic-reset
 cp -f config.conf /etc/x3-traffic-reset/config.conf
 
 # ============================================
-# Install the management script (NEW)
+# Install the management script
 # ============================================
 echo -e "${BLUE}📋 Installing management script...${NC}"
 sudo cp -f manager.py /usr/local/bin/x3-tf
@@ -196,7 +197,7 @@ echo ""
 echo -e "${BOLD}${YELLOW}📝 EDIT USER LIST${NC}"
 echo -e "${CYAN}──────────────────────────────────────────────────────────────${NC}"
 echo -e "  ${WHITE}nano /etc/x3-traffic-reset/config.conf${NC}"
-echo -e "  ${YELLOW}💡${NC} Add one User ID per line (find IDs in 3xUI panel)"
+echo -e "  ${YELLOW}💡${NC} Add one email per line (find emails in 3xUI panel)"
 echo ""
 
 # ============================================
