@@ -82,6 +82,13 @@ mkdir -p /etc/x3-traffic-reset
 cp -f config.conf /etc/x3-traffic-reset/config.conf
 
 # ============================================
+# Install the management script (NEW)
+# ============================================
+echo -e "${BLUE}📋 Installing management script...${NC}"
+sudo cp -f manager.py /usr/local/bin/x3-tf
+sudo chmod +x /usr/local/bin/x3-tf
+
+# ============================================
 # Create the systemd service
 # ============================================
 cat > /etc/systemd/system/x3-tf.service <<EOF
