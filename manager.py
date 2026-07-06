@@ -10,8 +10,8 @@ from pathlib import Path
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
 SERVICE_NAME = "x3-tf"
 VERSION = "2.3.0"
-SPONSOR_NAME = "HeySolo"
-SPONSOR_LINK = "https://t.me/HeySoloATM"
+SPONSOR_NAME = "Jade Tunnel"
+SPONSOR_LINK = "https://t.me/jadetunnell"
 # ===============================
 
 # Colors (ANSI escape codes)
