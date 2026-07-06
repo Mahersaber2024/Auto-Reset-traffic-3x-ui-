@@ -69,7 +69,7 @@ echo ""
 # Create the environment file (.env)
 # ============================================
 cat > .env <<EOF
-PANEL_URL=https://${PANEL_IP}:${PANEL_PORT}
+PANEL_BASE=https://${PANEL_IP}:${PANEL_PORT}${PANEL_PATH}
 USERNAME=${PANEL_USER}
 PASSWORD=${PANEL_PASS}
 CONFIG_FILE=${APP_DIR}/config.conf
