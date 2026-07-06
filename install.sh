@@ -12,10 +12,13 @@ VENV_DIR="/opt/x3-traffic-reset-venv"
 echo "🚀 Installing Traffic Reset Manager (Python version)..."
 echo ""
 
+# Update package list and install dependencies
+apt-get update -qq
+
 # Check Python
 if ! command -v python3 &> /dev/null; then
     echo "❌ Python3 is not installed. Installing..."
-    apt-get update && apt-get install -y python3 python3-pip python3-venv
+    apt-get install -y python3 python3-pip python3-venv
 fi
 
 # Create virtual environment
@@ -40,14 +43,14 @@ sudo curl -s -o "/tmp/requirements.txt" "$REPO_URL/requirements.txt"
 echo "📦 Installing Python dependencies..."
 sudo "$VENV_DIR/bin/pip" install -r /tmp/requirements.txt
 
-# Set permissions
+# Set permissions and shebang
 sudo chmod +x "$INSTALL_DIR/reset_daemon.py"
 sudo chmod +x "$INSTALL_DIR/manager.py"
 sudo chmod 600 "$CONFIG_DIR/config.conf"
 
-# Modify manager.py and reset_daemon.py to use venv python
-sudo sed -i "1i#!/usr/bin/env $VENV_DIR/bin/python3" "$INSTALL_DIR/reset_daemon.py"
-sudo sed -i "1i#!/usr/bin/env $VENV_DIR/bin/python3" "$INSTALL_DIR/manager.py"
+# Add venv python shebang
+sudo sed -i "1i#!/usr/bin/env $VENV_DIR/bin/python3" "$INSTALL_DIR/reset_daemon.py" 2>/dev/null || true
+sudo sed -i "1i#!/usr/bin/env $VENV_DIR/bin/python3" "$INSTALL_DIR/manager.py" 2>/dev/null || true
 
 # Create symlink
 sudo ln -sf "$INSTALL_DIR/manager.py" "$INSTALL_DIR/x3-tf"
@@ -61,23 +64,17 @@ read -p "Username: " PANEL_USER
 read -s -p "Password: " PANEL_PASS
 echo ""
 
-# Apply settings to Python script
+# Apply settings
 sudo sed -i "s|PANEL_URL = \".*\"|PANEL_URL = \"https://${PANEL_IP}:${PANEL_PORT}\"|" "$INSTALL_DIR/reset_daemon.py"
 sudo sed -i "s/USERNAME = \".*\"/USERNAME = \"${PANEL_USER}\"/" "$INSTALL_DIR/reset_daemon.py"
 sudo sed -i "s/PASSWORD = \".*\"/PASSWORD = \"${PANEL_PASS}\"/" "$INSTALL_DIR/reset_daemon.py"
 
 # Enable service
-echo "🔧 Enabling service (default interval: daily)..."
+echo "🔧 Enabling service..."
 sudo systemctl daemon-reload
 sudo systemctl enable x3-tf.timer
 sudo systemctl start x3-tf.timer
 
 echo ""
 echo "✅ Installation completed successfully!"
-echo ""
-echo "📋 You can now run: x3-tf"
-echo ""
-echo "📋 Useful commands:"
-echo "  - Open manager:        sudo x3-tf"
-echo "  - Check timer status:  sudo systemctl status x3-tf.timer"
-echo "  - View logs:           sudo journalctl -u x3-tf.service -f"
+echo "📋 Run: sudo x3-tf"
