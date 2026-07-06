@@ -60,6 +60,7 @@ echo ""
 echo -e "${BOLD}${YELLOW}⚙️ Please enter your 3xUI panel settings:${NC}"
 read -p "Panel IP address or domain (e.g. 192.168.1.100): " PANEL_IP
 read -p "Panel port (e.g. 2053): " PANEL_PORT
+read -p "Web Base Path (e.g. /KqOZWNk3zx7VDf1pDS, or press Enter if none): " PANEL_PATH
 read -p "Username: " PANEL_USER
 read -s -p "Password: " PANEL_PASS
 echo ""
