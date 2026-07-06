@@ -9,7 +9,7 @@ from pathlib import Path
 # ========== Settings ==========
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
 SERVICE_NAME = "x3-tf"
-VERSION = "2.2.0"
+VERSION = "2.3.0"
 SPONSOR_NAME = "HeySolo"
 SPONSOR_LINK = "https://t.me/HeySoloATM"
 # ===============================
@@ -251,16 +251,37 @@ def manual_reset():
     print(f"{Colors.YELLOW}💡 View logs: sudo journalctl -u {SERVICE_NAME}.service -f{Colors.NC}")
 
 def show_logs():
-    """Show service logs"""
-    print(f"{Colors.BLUE}📋 Showing last 20 log entries...{Colors.NC}")
-    print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
-    subprocess.run(['sudo', 'journalctl', '-u', f'{SERVICE_NAME}.service', '-n', '20', '--no-pager'])
-    print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
-    print(f"{Colors.YELLOW}💡 Press 'f' to follow logs live, or any other key to go back...{Colors.NC}")
-    
-    key = input().strip().lower()
-    if key == 'f':
-        subprocess.run(['sudo', 'journalctl', '-u', f'{SERVICE_NAME}.service', '-f'])
+    """Show logs with submenu for last lines or live follow"""
+    while True:
+        print(f"{Colors.BLUE}📋 Service Logs{Colors.NC}")
+        print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
+        print(f"  {Colors.GREEN}1.{Colors.NC} Show last 20 lines")
+        print(f"  {Colors.GREEN}2.{Colors.NC} Show last 50 lines")
+        print(f"  {Colors.GREEN}3.{Colors.NC} Follow live logs (real-time, press Ctrl+C to stop)")
+        print(f"  {Colors.GREEN}0.{Colors.NC} Back to main menu")
+        print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
+        
+        choice = input("Select option: ").strip()
+        
+        if choice == '1':
+            subprocess.run(['sudo', 'journalctl', '-u', f'{SERVICE_NAME}.service', '-n', '20', '--no-pager'])
+            input("\nPress any key to continue...")
+        elif choice == '2':
+            subprocess.run(['sudo', 'journalctl', '-u', f'{SERVICE_NAME}.service', '-n', '50', '--no-pager'])
+            input("\nPress any key to continue...")
+        elif choice == '3':
+            print(f"{Colors.YELLOW}💡 Following logs live. Press Ctrl+C to stop.{Colors.NC}")
+            print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
+            try:
+                subprocess.run(['sudo', 'journalctl', '-u', f'{SERVICE_NAME}.service', '-f'])
+            except KeyboardInterrupt:
+                print(f"\n{Colors.YELLOW}⏹️ Stopped following logs.{Colors.NC}")
+            input("\nPress any key to continue...")
+        elif choice == '0':
+            break
+        else:
+            print(f"{Colors.RED}❌ Invalid option!{Colors.NC}")
+            input("Press any key to continue...")
 
 def uninstall():
     """Uninstall the service"""
