@@ -7,6 +7,7 @@ REPO_URL="https://raw.githubusercontent.com/Mahersaber2024/Auto-Reset-traffic-3x
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/x3-traffic-reset"
 SERVICE_DIR="/etc/systemd/system"
+VENV_DIR="/opt/x3-traffic-reset-venv"
 
 echo "🚀 Installing Traffic Reset Manager (Python version)..."
 echo ""
@@ -14,8 +15,13 @@ echo ""
 # Check Python
 if ! command -v python3 &> /dev/null; then
     echo "❌ Python3 is not installed. Installing..."
-    apt-get update && apt-get install -y python3 python3-pip
+    apt-get update && apt-get install -y python3 python3-pip python3-venv
 fi
+
+# Create virtual environment
+echo "🐍 Creating virtual environment..."
+sudo python3 -m venv "$VENV_DIR"
+sudo "$VENV_DIR/bin/pip" install --upgrade pip
 
 # Create directories
 sudo mkdir -p "$CONFIG_DIR"
@@ -30,14 +36,18 @@ sudo curl -s -o "$SERVICE_DIR/x3-tf.service" "$REPO_URL/x3-tf.service"
 sudo curl -s -o "$SERVICE_DIR/x3-tf.timer" "$REPO_URL/x3-tf.timer"
 sudo curl -s -o "/tmp/requirements.txt" "$REPO_URL/requirements.txt"
 
-# Install Python dependencies
+# Install Python dependencies in venv
 echo "📦 Installing Python dependencies..."
-pip3 install -r /tmp/requirements.txt
+sudo "$VENV_DIR/bin/pip" install -r /tmp/requirements.txt
 
 # Set permissions
 sudo chmod +x "$INSTALL_DIR/reset_daemon.py"
 sudo chmod +x "$INSTALL_DIR/manager.py"
 sudo chmod 600 "$CONFIG_DIR/config.conf"
+
+# Modify manager.py and reset_daemon.py to use venv python
+sudo sed -i "1i#!/usr/bin/env $VENV_DIR/bin/python3" "$INSTALL_DIR/reset_daemon.py"
+sudo sed -i "1i#!/usr/bin/env $VENV_DIR/bin/python3" "$INSTALL_DIR/manager.py"
 
 # Create symlink
 sudo ln -sf "$INSTALL_DIR/manager.py" "$INSTALL_DIR/x3-tf"
