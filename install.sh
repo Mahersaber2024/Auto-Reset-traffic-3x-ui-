@@ -3,7 +3,7 @@
 
 set -e
 
-REPO_URL="https://raw.githubusercontent.com/YOUR_USERNAME/x3-traffic-reset/main"
+REPO_URL="https://raw.githubusercontent.com/Mahersaber2024/Auto-Reset-traffic-3x-ui-/main"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/x3-traffic-reset"
 SERVICE_DIR="/etc/systemd/system"
@@ -65,7 +65,7 @@ sudo systemctl start x3-tf.timer
 echo ""
 echo "✅ Installation completed successfully!"
 echo ""
-echo "📋 You can now run: ${BOLD}x3-tf${NC}"
+echo "📋 You can now run: x3-tf"
 echo ""
 echo "📋 Useful commands:"
 echo "  - Open manager:        sudo x3-tf"
