@@ -6,18 +6,32 @@ import sys
 import json
 import logging
 import requests
-from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv('/opt/x3-traffic-reset/.env')
+# ========== Fallback Settings (if .env not found) ==========
+DEFAULT_PANEL_BASE = "https://mashine.ikcogo.ir:2053/KqOZWNk3zx7VDf1pDS"
+DEFAULT_USERNAME = "Ed2GDE8uC9"
+DEFAULT_PASSWORD = "BQ6NPEp22Z"
+DEFAULT_CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
+DEFAULT_LOG_FILE = "/var/log/x3-traffic-reset.log"
+# ============================================================
 
-# ========== Settings from .env ==========
-PANEL_BASE = os.getenv('PANEL_BASE', 'https://YOUR_PANEL_IP:2053/YOUR_PATH')
-USERNAME = os.getenv('USERNAME', 'admin')
-PASSWORD = os.getenv('PASSWORD', 'password')
-CONFIG_FILE = os.getenv('CONFIG_FILE', '/etc/x3-traffic-reset/config.conf')
-LOG_FILE = os.getenv('LOG_FILE', '/var/log/x3-traffic-reset.log')
-# =========================================
+# Try to load .env, but if not, use defaults
+try:
+    from dotenv import load_dotenv
+    load_dotenv('/opt/x3-traffic-reset/.env')
+    PANEL_BASE = os.getenv('PANEL_BASE', DEFAULT_PANEL_BASE)
+    USERNAME = os.getenv('USERNAME', DEFAULT_USERNAME)
+    PASSWORD = os.getenv('PASSWORD', DEFAULT_PASSWORD)
+    CONFIG_FILE = os.getenv('CONFIG_FILE', DEFAULT_CONFIG_FILE)
+    LOG_FILE = os.getenv('LOG_FILE', DEFAULT_LOG_FILE)
+    print("✅ Loaded settings from .env")
+except:
+    PANEL_BASE = DEFAULT_PANEL_BASE
+    USERNAME = DEFAULT_USERNAME
+    PASSWORD = DEFAULT_PASSWORD
+    CONFIG_FILE = DEFAULT_CONFIG_FILE
+    LOG_FILE = DEFAULT_LOG_FILE
+    print("⚠️ Using default settings (fallback)")
 
 # Setup logging
 logging.basicConfig(
@@ -31,8 +45,11 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+logger.info(f"📡 Panel: {PANEL_BASE}")
+logger.info(f"📁 Config: {CONFIG_FILE}")
+
 def read_emails():
-    """Read email list from config file (one email per line)"""
+    """Read email list from config file"""
     if not os.path.exists(CONFIG_FILE):
         logger.error(f"❌ Config file not found: {CONFIG_FILE}")
         return []
@@ -106,7 +123,7 @@ def main():
         logger.warning("⚠️ No emails in reset list.")
         return 0
     
-    logger.info(f"📋 Found {len(emails)} users")
+    logger.info(f"📋 Found {len(emails)} users: {emails}")
     
     session, csrf_token = login_to_panel()
     if not session or not csrf_token:
@@ -129,13 +146,5 @@ def main():
 if __name__ == "__main__":
     import urllib3
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    
-    # Ensure dotenv is installed
-    try:
-        import dotenv
-    except ImportError:
-        print("⚠️ python-dotenv not found, installing...")
-        os.system(f"{sys.executable} -m pip install python-dotenv")
-        import dotenv
     
     sys.exit(main())
