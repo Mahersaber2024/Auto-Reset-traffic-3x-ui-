@@ -8,10 +8,14 @@ SERVICE_USER="root"
 GREEN='\033[0;32m'
 RED='\033[0;31m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
+WHITE='\033[1;37m'
 NC='\033[0m'
+BOLD='\033[1m'
 
-echo "🚀 Installing Traffic Reset Manager for 3xUI..."
+echo -e "${BOLD}${CYAN}🚀 Installing Traffic Reset Manager for 3xUI...${NC}"
 echo ""
 
 # ============================================
@@ -27,13 +31,13 @@ apt install -y git python3 python3-venv python3-pip curl
 if [ ! -d "$APP_DIR/.git" ]; then
   rm -rf "$APP_DIR"
   git clone --depth 1 "$REPO_URL" "$APP_DIR" || {
-    echo -e "${RED}Git clone failed. Check repository URL.${NC}"
+    echo -e "${RED}❌ Git clone failed. Check repository URL.${NC}"
     exit 1
   }
 else
   cd "$APP_DIR"
   git pull || {
-    echo -e "${RED}Git pull failed.${NC}"
+    echo -e "${RED}❌ Git pull failed.${NC}"
     exit 1
   }
 fi
@@ -43,6 +47,7 @@ cd "$APP_DIR"
 # ============================================
 # Create the virtual environment
 # ============================================
+echo -e "${BLUE}🐍 Creating virtual environment...${NC}"
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --upgrade pip
@@ -52,7 +57,7 @@ pip install -r requirements.txt
 # Get settings from the user
 # ============================================
 echo ""
-echo "⚙️ Please enter your 3xUI panel settings:"
+echo -e "${BOLD}${YELLOW}⚙️ Please enter your 3xUI panel settings:${NC}"
 read -p "Panel IP address or domain (e.g. 192.168.1.100): " PANEL_IP
 read -p "Panel port (e.g. 2053): " PANEL_PORT
 read -p "Username: " PANEL_USER
@@ -73,7 +78,8 @@ EOF
 # ============================================
 # Copy configuration files
 # ============================================
-cp -f config.conf /etc/x3-traffic-reset/config.conf 2>/dev/null || mkdir -p /etc/x3-traffic-reset && cp config.conf /etc/x3-traffic-reset/
+mkdir -p /etc/x3-traffic-reset
+cp -f config.conf /etc/x3-traffic-reset/config.conf
 
 # ============================================
 # Create the systemd service
@@ -124,41 +130,74 @@ systemctl restart x3-tf.timer
 TIMER_STATUS=$(systemctl is-active x3-tf.timer || true)
 
 echo ""
-echo -e "${CYAN}_________________________________${NC}"
-echo -e "${CYAN}_________________________________${NC}"
+echo -e "${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
+echo -e "${CYAN}║                                                            ║${NC}"
+echo -e "${CYAN}║         ${BOLD}✅ INSTALLATION COMPLETED SUCCESSFULLY${NC}${CYAN}         ║${NC}"
+echo -e "${CYAN}║                                                            ║${NC}"
+echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}"
+echo ""
+
+# ============================================
+# Service Status
+# ============================================
+echo -e "${BOLD}${BLUE}📊 SERVICE STATUS${NC}"
+echo -e "${CYAN}──────────────────────────────────────────────────────────────${NC}"
 
 if [ "$TIMER_STATUS" = "active" ]; then
-  echo -e "${GREEN}Traffic Reset Service: ACTIVE${NC}"
+  echo -e "  ${GREEN}●${NC} Traffic Reset Service: ${GREEN}ACTIVE${NC} ✓"
 else
-  echo -e "${RED}Traffic Reset Service: FAILED${NC}"
+  echo -e "  ${RED}●${NC} Traffic Reset Service: ${RED}FAILED${NC} ✗"
 fi
 
-echo -e "${GREEN}Config File:${NC} /etc/x3-traffic-reset/config.conf"
-echo -e "${GREEN}Log File:${NC} /var/log/x3-traffic-reset.log"
-
-echo -e "${CYAN}_________________________________${NC}"
-echo -e "${CYAN}_________________________________${NC}"
+echo -e "  ${BLUE}●${NC} Config File: ${WHITE}/etc/x3-traffic-reset/config.conf${NC}"
+echo -e "  ${BLUE}●${NC} Log File: ${WHITE}/var/log/x3-traffic-reset.log${NC}"
+echo -e "  ${BLUE}●${NC} Install Dir: ${WHITE}${APP_DIR}${NC}"
+echo ""
 
 # ============================================
-# Service management guide
+# How to Run the Menu
 # ============================================
-echo -e "\n${CYAN}================== MANAGEMENT GUIDE ==================${NC}"
-echo -e "${YELLOW}To check service status:${NC}"
-echo "  systemctl status x3-tf.timer"
+echo -e "${BOLD}${PURPLE}🎮 HOW TO RUN THE MANAGEMENT MENU${NC}"
+echo -e "${CYAN}──────────────────────────────────────────────────────────────${NC}"
+echo -e "  ${YELLOW}Just type:${NC} ${BOLD}${WHITE}x3-tf${NC}"
+echo -e "  ${YELLOW}Or:${NC}         ${BOLD}${WHITE}sudo x3-tf${NC}"
+echo ""
+echo -e "  ${GREEN}▶${NC} This will open the interactive menu where you can:"
+echo -e "     ${WHITE}•${NC} Add/remove users from auto-reset list"
+echo -e "     ${WHITE}•${NC} Change reset interval (hourly, daily, custom)"
+echo -e "     ${WHITE}•${NC} Run manual reset"
+echo -e "     ${WHITE}•${NC} View logs"
+echo ""
 
-echo -e "\n${YELLOW}To stop the service:${NC}"
-echo "  systemctl stop x3-tf.timer"
+# ============================================
+# Service Management Guide
+# ============================================
+echo -e "${BOLD}${CYAN}🔧 SERVICE MANAGEMENT${NC}"
+echo -e "${CYAN}──────────────────────────────────────────────────────────────${NC}"
+echo -e "  ${GREEN}▶${NC} Check status:     ${WHITE}systemctl status x3-tf.timer${NC}"
+echo -e "  ${GREEN}▶${NC} Stop service:     ${WHITE}systemctl stop x3-tf.timer${NC}"
+echo -e "  ${GREEN}▶${NC} Start service:    ${WHITE}systemctl start x3-tf.timer${NC}"
+echo -e "  ${GREEN}▶${NC} Restart service:  ${WHITE}systemctl restart x3-tf.timer${NC}"
+echo -e "  ${GREEN}▶${NC} View logs:        ${WHITE}journalctl -u x3-tf.service -f${NC}"
+echo -e "  ${GREEN}▶${NC} Manual reset:     ${WHITE}systemctl start x3-tf.service${NC}"
+echo ""
 
-echo -e "\n${YELLOW}To restart the service:${NC}"
-echo "  systemctl restart x3-tf.timer"
+# ============================================
+# Edit User List
+# ============================================
+echo -e "${BOLD}${YELLOW}📝 EDIT USER LIST${NC}"
+echo -e "${CYAN}──────────────────────────────────────────────────────────────${NC}"
+echo -e "  ${WHITE}nano /etc/x3-traffic-reset/config.conf${NC}"
+echo -e "  ${YELLOW}💡${NC} Add one User ID per line (find IDs in 3xUI panel)"
+echo ""
 
-echo -e "\n${YELLOW}To view service logs:${NC}"
-echo "  journalctl -u x3-tf.service -f"
+# ============================================
+# Support
+# ============================================
+echo -e "${BOLD}${PURPLE}🌟 SPONSOR${NC}"
+echo -e "${CYAN}──────────────────────────────────────────────────────────────${NC}"
+echo -e "  ${BOLD}HeySolo${NC} - ${WHITE}https://t.me/HeySoloATM${NC}"
+echo ""
 
-echo -e "\n${YELLOW}To manually run a reset:${NC}"
-echo "  systemctl start x3-tf.service"
-
-echo -e "\n${YELLOW}To edit user list:${NC}"
-echo "  nano /etc/x3-traffic-reset/config.conf"
-
-echo -e "\n${GREEN}Installation completed successfully!${NC}"
+echo -e "${GREEN}${BOLD}🎯 Quick Start:${NC} Just run ${BOLD}x3-tf${NC} to start managing your users!${NC}"
+echo -e "${CYAN}════════════════════════════════════════════════════════════${NC}"
