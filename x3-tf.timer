@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer for Traffic Reset Service
+Requires=x3-tf.service
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+
+[Install]
+WantedBy=timers.target
