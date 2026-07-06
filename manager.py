@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# manager.py - Interactive menu for traffic reset management (Python version)
+# manager.py - Interactive menu for traffic reset management (Email-based)
 
 import os
 import sys
@@ -9,7 +9,7 @@ from pathlib import Path
 # ========== Settings ==========
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
 SERVICE_NAME = "x3-tf"
-VERSION = "2.1.0"
+VERSION = "2.2.0"
 SPONSOR_NAME = "HeySolo"
 SPONSOR_LINK = "https://t.me/HeySoloATM"
 # ===============================
@@ -67,7 +67,7 @@ def get_current_interval():
     return "Not configured"
 
 def count_users():
-    """Count users in config file"""
+    """Count users (emails) in config file"""
     if not os.path.exists(CONFIG_FILE):
         return 0
     
@@ -80,12 +80,12 @@ def count_users():
     return count
 
 def list_users():
-    """Display list of users"""
+    """Display list of user emails"""
     if not os.path.exists(CONFIG_FILE):
         print(f"{Colors.RED}❌ Config file not found!{Colors.NC}")
         return
     
-    print(f"{Colors.BLUE}📋 Users in traffic reset list:{Colors.NC}")
+    print(f"{Colors.BLUE}📋 Users (emails) in traffic reset list:{Colors.NC}")
     print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
     
     count = 0
@@ -94,40 +94,40 @@ def list_users():
             line = line.strip()
             if line and not line.startswith('#'):
                 count += 1
-                print(f"  {Colors.GREEN}{count}.{Colors.NC} User ID: {Colors.BOLD}{line}{Colors.NC}")
+                print(f"  {Colors.GREEN}{count}.{Colors.NC} Email: {Colors.BOLD}{line}{Colors.NC}")
     
     if count == 0:
-        print(f"  {Colors.YELLOW}⚠️ No users in the list.{Colors.NC}")
+        print(f"  {Colors.YELLOW}⚠️ No emails in the list.{Colors.NC}")
     
     print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
 
 def add_user():
-    """Add a user to the config"""
+    """Add an email to the config"""
     print(f"{Colors.BLUE}➕ Add User to Traffic Reset List{Colors.NC}")
     print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
     
-    user_id = input("Enter User ID (from 3xUI panel): ").strip()
+    email = input("Enter client email: ").strip()
     
-    if not user_id:
-        print(f"{Colors.RED}❌ User ID cannot be empty!{Colors.NC}")
+    if not email:
+        print(f"{Colors.RED}❌ Email cannot be empty!{Colors.NC}")
         return
     
-    # Check if user already exists
+    # Check if email already exists
     if os.path.exists(CONFIG_FILE):
         with open(CONFIG_FILE, 'r') as f:
             for line in f:
-                if line.strip() == user_id:
-                    print(f"{Colors.YELLOW}⚠️ User ID {user_id} is already in the list.{Colors.NC}")
+                if line.strip() == email:
+                    print(f"{Colors.YELLOW}⚠️ Email {email} is already in the list.{Colors.NC}")
                     return
     
-    # Add user
+    # Add email
     with open(CONFIG_FILE, 'a') as f:
-        f.write(f"{user_id}\n")
+        f.write(f"{email}\n")
     
-    print(f"{Colors.GREEN}✅ User ID {user_id} added to traffic reset list!{Colors.NC}")
+    print(f"{Colors.GREEN}✅ Email {email} added to traffic reset list!{Colors.NC}")
 
 def remove_user():
-    """Remove a user from the config"""
+    """Remove an email from the config"""
     print(f"{Colors.RED}➖ Remove User from Traffic Reset List{Colors.NC}")
     print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
     
@@ -135,43 +135,43 @@ def remove_user():
         print(f"{Colors.RED}❌ Config file not found!{Colors.NC}")
         return
     
-    # Read all users
-    users = []
+    # Read all emails
+    emails = []
     with open(CONFIG_FILE, 'r') as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith('#'):
-                users.append(line)
+                emails.append(line)
     
-    if not users:
-        print(f"{Colors.YELLOW}⚠️ No users in the list to remove.{Colors.NC}")
+    if not emails:
+        print(f"{Colors.YELLOW}⚠️ No emails in the list to remove.{Colors.NC}")
         return
     
-    # Display users
-    print(f"{Colors.BLUE}Select user to remove:{Colors.NC}")
-    for i, user in enumerate(users, 1):
-        print(f"  {Colors.GREEN}{i}.{Colors.NC} User ID: {Colors.BOLD}{user}{Colors.NC}")
+    # Display emails
+    print(f"{Colors.BLUE}Select email to remove:{Colors.NC}")
+    for i, email in enumerate(emails, 1):
+        print(f"  {Colors.GREEN}{i}.{Colors.NC} {email}")
     
     try:
-        choice = int(input(f"Enter number (1-{len(users)}): ").strip())
-        if choice < 1 or choice > len(users):
+        choice = int(input(f"Enter number (1-{len(emails)}): ").strip())
+        if choice < 1 or choice > len(emails):
             print(f"{Colors.RED}❌ Invalid selection!{Colors.NC}")
             return
     except ValueError:
         print(f"{Colors.RED}❌ Invalid input!{Colors.NC}")
         return
     
-    # Remove user
-    user_to_remove = users[choice - 1]
+    # Remove email
+    email_to_remove = emails[choice - 1]
     with open(CONFIG_FILE, 'r') as f:
         lines = f.readlines()
     
     with open(CONFIG_FILE, 'w') as f:
         for line in lines:
-            if line.strip() != user_to_remove:
+            if line.strip() != email_to_remove:
                 f.write(line)
     
-    print(f"{Colors.GREEN}✅ User ID {user_to_remove} removed from traffic reset list!{Colors.NC}")
+    print(f"{Colors.GREEN}✅ Email {email_to_remove} removed from traffic reset list!{Colors.NC}")
 
 def set_interval():
     """Set reset interval"""
@@ -277,15 +277,15 @@ def main():
         ).stdout.strip()
         
         print(f"{Colors.BLUE}📊 Status:{Colors.NC}")
-        print(f"  {Colors.GREEN}●{Colors.NC} Users in traffic reset list: {Colors.BOLD}{user_count}{Colors.NC}")
+        print(f"  {Colors.GREEN}●{Colors.NC} Users (emails) in reset list: {Colors.BOLD}{user_count}{Colors.NC}")
         print(f"  {Colors.GREEN}●{Colors.NC} Reset interval: {Colors.BOLD}{interval}{Colors.NC}")
         print(f"  {Colors.GREEN}●{Colors.NC} Service status: {Colors.BOLD}{service_status}{Colors.NC}")
         print("")
         
         print(f"{Colors.BLUE}📋 Menu:{Colors.NC}")
-        print(f"  {Colors.GREEN}1.{Colors.NC} 📋 List users in reset list")
-        print(f"  {Colors.GREEN}2.{Colors.NC} ➕ Add user (by User ID)")
-        print(f"  {Colors.GREEN}3.{Colors.NC} ➖ Remove user (by User ID)")
+        print(f"  {Colors.GREEN}1.{Colors.NC} 📋 List users (emails) in reset list")
+        print(f"  {Colors.GREEN}2.{Colors.NC} ➕ Add user (by email)")
+        print(f"  {Colors.GREEN}3.{Colors.NC} ➖ Remove user (by email)")
         print(f"  {Colors.GREEN}4.{Colors.NC} ⏰ Set reset interval")
         print(f"  {Colors.GREEN}5.{Colors.NC} 🔄 Run manual traffic reset now")
         print(f"  {Colors.GREEN}6.{Colors.NC} 📋 View logs")
