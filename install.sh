@@ -60,7 +60,7 @@ echo ""
 echo -e "${BOLD}${YELLOW}⚙️ Please enter your 3xUI panel settings:${NC}"
 read -p "Panel IP address or domain (e.g. 192.168.1.100): " PANEL_IP
 read -p "Panel port (default: 2053): " PANEL_PORT
-PANEL_PORT=${PANEL_PORT:-2053}   # Set default if empty
+PANEL_PORT=${PANEL_PORT:-2053}
 read -p "Web Base Path (e.g. /KqOZWNk3zx7VDf1pDS, or press Enter if none): " PANEL_PATH
 read -p "Username: " PANEL_USER
 read -s -p "Password: " PANEL_PASS
@@ -91,7 +91,7 @@ sudo cp -f manager.py /usr/local/bin/x3-tf
 sudo chmod +x /usr/local/bin/x3-tf
 
 # ============================================
-# Create the systemd service
+# Create the systemd service (with Restart=no)
 # ============================================
 cat > /etc/systemd/system/x3-tf.service <<EOF
 [Unit]
@@ -103,8 +103,9 @@ User=$SERVICE_USER
 WorkingDirectory=$APP_DIR
 EnvironmentFile=$APP_DIR/.env
 ExecStart=$APP_DIR/.venv/bin/python $APP_DIR/reset_daemon.py
-Restart=always
-RestartSec=3
+Restart=no
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -172,7 +173,7 @@ echo -e "  ${YELLOW}Just type:${NC} ${BOLD}${WHITE}x3-tf${NC}"
 echo -e "  ${YELLOW}Or:${NC}         ${BOLD}${WHITE}sudo x3-tf${NC}"
 echo ""
 echo -e "  ${GREEN}▶${NC} This will open the interactive menu where you can:"
-echo -e "     ${WHITE}•${NC} Add/remove users from auto-reset list"
+echo -e "     ${WHITE}•${NC} Add/remove users by email"
 echo -e "     ${WHITE}•${NC} Change reset interval (hourly, daily, custom)"
 echo -e "     ${WHITE}•${NC} Run manual reset"
 echo -e "     ${WHITE}•${NC} View logs"
