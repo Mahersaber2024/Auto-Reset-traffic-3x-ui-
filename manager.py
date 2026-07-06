@@ -259,7 +259,7 @@ def uninstall():
     print(f"{Colors.RED}⚠️ Are you sure you want to uninstall? (y/N): {Colors.NC}")
     confirm = input().strip().lower()
     if confirm == 'y':
-        subprocess.run(['bash', '<(curl -Ls https://raw.githubusercontent.com/YOUR_USERNAME/x3-traffic-reset/main/uninstall.sh)'], shell=True)
+        subprocess.run(['bash', '<(curl -Ls https://raw.githubusercontent.com/Mahersaber2024/Auto-Reset-traffic-3x-ui-/main/uninstall.sh)'], shell=True)
         sys.exit(0)
 
 def main():
