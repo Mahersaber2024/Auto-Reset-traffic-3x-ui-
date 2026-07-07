@@ -1,3 +1,6 @@
+
+[English](README.md) · [فارسی](README.fa.md)
+
 # Auto-Reset-Traffic for 3x-UI
 
 A lightweight and efficient tool for automatically resetting traffic for **specific users** on your [3x-UI](https://github.com/MHSanaei/3x-ui) panel.
