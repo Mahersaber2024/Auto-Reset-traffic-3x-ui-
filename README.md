@@ -19,16 +19,6 @@ Unlike global reset scripts, this project focuses only on the users you define i
 - Simple one-command installation and uninstallation.
 - Lightweight Python implementation.
 
-## Project Structure
-
-- `install.sh` — Installation script.
-- `manager.py` — Interactive management menu.
-- `reset_daemon.py` — Main traffic reset daemon.
-- `config.conf` — List of users to reset.
-- `requirements.txt` — Python dependencies.
-- `x3-tf.service` / `x3-tf.timer` — systemd service and timer files.
-- `uninstall.sh` — Uninstallation script.
-
 ## Requirements
 
 - Linux server with `systemd`.
