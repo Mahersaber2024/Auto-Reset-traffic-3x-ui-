@@ -447,8 +447,8 @@ def main():
         print(f"  {Colors.GREEN}5.{Colors.NC} 🔄 Run manual traffic reset now")
         print(f"  {Colors.GREEN}6.{Colors.NC} 📋 View logs")
         print(f"  {Colors.GREEN}7.{Colors.NC} ⚙️  Edit panel settings")
-        print(f"  {Colors.GREEN}8.{Colors.NC} ❌ Uninstall service")
-        print(f"  {Colors.GREEN}9.{Colors.NC} 📋 Client Manager (3xUI Panel)")
+        print(f"  {Colors.GREEN}8.{Colors.NC} 📋 Client Manager (3xUI Panel)")
+        print(f"  {Colors.GREEN}9.{Colors.NC} ❌ Uninstall service")
         print(f"  {Colors.GREEN}0.{Colors.NC} 🚪 Exit")
         print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
         
@@ -469,6 +469,19 @@ def main():
         elif choice == '7':
             edit_panel_settings()
         elif choice == '8':
+            # Run client_manager.py
+            script_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'client_manager.py')
+            if os.path.exists(script_path):
+                subprocess.run(['python3', script_path], check=False)
+            else:
+                # Try alternative path
+                alt_path = '/usr/local/bin/client_manager.py'
+                if os.path.exists(alt_path):
+                    subprocess.run(['python3', alt_path], check=False)
+                else:
+                    print(f"{Colors.RED}❌ client_manager.py not found!{Colors.NC}")
+                    input(f"{Colors.YELLOW}Press Enter to continue...{Colors.NC}")
+        elif choice == '9':
             uninstall()
         elif choice == '0':
             print(f"{Colors.GREEN}👋 Goodbye!{Colors.NC}")
