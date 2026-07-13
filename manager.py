@@ -318,7 +318,7 @@ def main():
         print(f"  {Colors.GREEN}4.{Colors.NC} ⏰ Set reset interval")
         print(f"  {Colors.GREEN}5.{Colors.NC} 🔄 Run manual traffic reset now")
         print(f"  {Colors.GREEN}6.{Colors.NC} 📋 View logs")
-        print(f"  {Colors.GREEN}7.{Colors.NC} 👤 Client Management (3x-UI API)")
+        print(f"  {Colors.GREEN}7.{Colors.NC} 👤 Client Management (Create new clients via API)")  # گزینه جدید
         print(f"  {Colors.GREEN}8.{Colors.NC} ❌ Uninstall service")
         print(f"  {Colors.GREEN}0.{Colors.NC} 🚪 Exit")
         print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
@@ -338,9 +338,7 @@ def main():
         elif choice == '6':
             show_logs()
         elif choice == '7':
-            # Import client_manager module
-            from client_manager import show_client_menu
-            show_client_menu()
+            client_management()
         elif choice == '8':
             uninstall()
         elif choice == '0':
