@@ -12,7 +12,7 @@ from urllib.parse import urlsplit, urlunsplit
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
 ENV_FILE = "/opt/x3-traffic-reset/.env"
 SERVICE_NAME = "x3-tf"
-VERSION = "2.4.0"
+VERSION = "2.4.1"
 SPONSOR_NAME = "Jade Tunnel"
 SPONSOR_LINK = "https://t.me/jadetunnell"
 # ===============================
