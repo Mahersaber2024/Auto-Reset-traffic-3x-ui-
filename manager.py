@@ -9,7 +9,7 @@ from pathlib import Path
 # ========== Settings ==========
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
 SERVICE_NAME = "x3-tf"
-VERSION = "2.3.0"
+VERSION = "2.3.1"
 SPONSOR_NAME = "Jade Tunnel"
 SPONSOR_LINK = "https://t.me/jadetunnell"
 # ===============================
