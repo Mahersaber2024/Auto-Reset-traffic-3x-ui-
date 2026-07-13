@@ -9,7 +9,7 @@ from pathlib import Path
 # ========== Settings ==========
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
 SERVICE_NAME = "x3-tf"
-VERSION = "2.3.1"
+VERSION = "2.3.2"
 SPONSOR_NAME = "Jade Tunnel"
 SPONSOR_LINK = "https://t.me/jadetunnell"
 # ===============================
@@ -291,6 +291,22 @@ def uninstall():
         subprocess.run(['bash', '<(curl -Ls https://raw.githubusercontent.com/Mahersaber2024/Auto-Reset-traffic-3x-ui-/main/uninstall.sh)'], shell=True)
         sys.exit(0)
 
+# ========== NEW: Client Management Function ==========
+def client_management():
+    """Open client management menu via API"""
+    try:
+        # Import the client manager module
+        from client_manager import show_client_menu
+        show_client_menu()
+    except ImportError as e:
+        print(f"{Colors.RED}❌ Error: client_manager module not found!{Colors.NC}")
+        print(f"{Colors.YELLOW}💡 Please make sure client_manager.py is in the same directory.{Colors.NC}")
+        print(f"{Colors.RED}Error details: {e}{Colors.NC}")
+        input("\nPress any key to continue...")
+    except Exception as e:
+        print(f"{Colors.RED}❌ Error loading client manager: {e}{Colors.NC}")
+        input("\nPress any key to continue...")
+        
 def main():
     """Main menu loop"""
     while True:
