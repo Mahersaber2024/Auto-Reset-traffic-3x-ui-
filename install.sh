@@ -30,7 +30,7 @@ apt install -y git python3 python3-venv python3-pip curl
 # ============================================
 if [ ! -d "$APP_DIR/.git" ]; then
   rm -rf "$APP_DIR"
-  git clone --depth 1 "$REPO_URL" "$APP_DIR" || {
+  git clone --depth 1 -b New-one "$REPO_URL" "$APP_DIR" || {
     echo -e "${RED}❌ Git clone failed. Check repository URL.${NC}"
     exit 1
   }
