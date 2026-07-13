@@ -448,6 +448,7 @@ def main():
         print(f"  {Colors.GREEN}6.{Colors.NC} 📋 View logs")
         print(f"  {Colors.GREEN}7.{Colors.NC} ⚙️  Edit panel settings")
         print(f"  {Colors.GREEN}8.{Colors.NC} ❌ Uninstall service")
+        print(f"  {Colors.GREEN}9.{Colors.NC} 📋 Client Manager (3xUI Panel)")
         print(f"  {Colors.GREEN}0.{Colors.NC} 🚪 Exit")
         print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
         
