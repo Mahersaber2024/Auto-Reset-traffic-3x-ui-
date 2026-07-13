@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# client_manager.py - 3xUI Client Management Module
+# client_manager.py - 3xUI Client Management Module (Using CSRF)
 
 import os
 import sys
@@ -13,7 +13,7 @@ from pathlib import Path
 # ========== Settings ==========
 ENV_FILE = "/opt/x3-traffic-reset/.env"
 CONFIG_DIR = "/etc/x3-traffic-reset"
-TOKEN_FILE = f"{CONFIG_DIR}/api_token.json"
+SESSION_FILE = f"{CONFIG_DIR}/session_cookie.json"
 # ===============================
 
 # Colors
@@ -54,95 +54,117 @@ def get_panel_info():
     
     return panel_base, username, password
 
-def get_token(panel_base, username, password):
-    """Get API token from panel"""
-    # Check if token is cached and still valid
-    if os.path.exists(TOKEN_FILE):
+def get_session(panel_base, username, password):
+    """Get session with CSRF token from panel (like reset_daemon.py)"""
+    session = requests.Session()
+    
+    # Check if session is cached and still valid
+    if os.path.exists(SESSION_FILE):
         try:
-            with open(TOKEN_FILE, 'r') as f:
+            with open(SESSION_FILE, 'r') as f:
                 data = json.load(f)
                 if data.get('panel_base') == panel_base:
-                    # Token valid for 24 hours
+                    # Session valid for 24 hours
                     created = datetime.fromisoformat(data.get('created', '2000-01-01'))
                     if datetime.now() - created < timedelta(hours=24):
-                        return data.get('token')
+                        # Restore cookies
+                        session.cookies.update(data.get('cookies', {}))
+                        csrf_token = data.get('csrf_token')
+                        return session, csrf_token
         except:
             pass
     
-    # Get new token
-    login_url = f"{panel_base}/panel/api/auth/login"
+    # 1. Get CSRF token
+    csrf_url = f"{panel_base}/csrf-token"
     try:
-        response = requests.post(
+        response = session.get(csrf_url, verify=False, timeout=10)
+        response.raise_for_status()
+        csrf_token = response.json().get('obj')
+        if not csrf_token:
+            print(f"{Colors.RED}❌ Failed to get CSRF token{Colors.NC}")
+            return None, None
+    except requests.exceptions.RequestException as e:
+        print(f"{Colors.RED}❌ Connection error (CSRF): {e}{Colors.NC}")
+        return None, None
+    
+    # 2. Login with CSRF token (like reset_daemon.py)
+    login_url = f"{panel_base}/login"
+    try:
+        response = session.post(
             login_url,
             json={"username": username, "password": password},
+            headers={"x-csrf-token": csrf_token},
             verify=False,
             timeout=10
         )
         response.raise_for_status()
-        data = response.json()
-        token = data.get('token')
-        if not token:
-            token = data.get('data', {}).get('token')
         
-        if token:
-            # Cache token
-            os.makedirs(CONFIG_DIR, exist_ok=True)
-            with open(TOKEN_FILE, 'w') as f:
-                json.dump({
-                    'token': token,
-                    'panel_base': panel_base,
-                    'created': datetime.now().isoformat()
-                }, f)
-            return token
+        # Cache session
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        with open(SESSION_FILE, 'w') as f:
+            json.dump({
+                'panel_base': panel_base,
+                'csrf_token': csrf_token,
+                'cookies': session.cookies.get_dict(),
+                'created': datetime.now().isoformat()
+            }, f)
         
-        print(f"{Colors.RED}❌ Failed to get token. Server response: {data}{Colors.NC}")
-        return None
+        return session, csrf_token
     except requests.exceptions.RequestException as e:
-        print(f"{Colors.RED}❌ Connection error: {e}{Colors.NC}")
-        return None
+        print(f"{Colors.RED}❌ Login failed: {e}{Colors.NC}")
+        return None, None
 
-def get_headers(token):
+def get_headers(csrf_token):
     """Get headers for API requests"""
     return {
-        "Authorization": f"Bearer {token}",
+        "x-csrf-token": csrf_token,
         "Content-Type": "application/json",
         "Accept": "application/json"
     }
 
-def list_clients(panel_base, token, show_all=True):
+def list_clients(panel_base, session, csrf_token):
     """List all clients from panel"""
-    url = f"{panel_base}/panel/api/clients/list"
+    url = f"{panel_base}/panel/api/inbounds/list"
     try:
-        response = requests.get(
+        response = session.get(
             url,
-            headers=get_headers(token),
+            headers=get_headers(csrf_token),
             verify=False,
             timeout=10
         )
         response.raise_for_status()
         data = response.json()
         
-        clients = data.get('obj', [])
-        if not clients:
-            clients = data.get('data', {}).get('obj', [])
+        # Extract clients from inbounds (like reset_daemon.py does)
+        clients = []
+        for inbound in data.get('obj', []):
+            settings_str = inbound.get('settings', '{}')
+            try:
+                settings = json.loads(settings_str) if isinstance(settings_str, str) else settings_str
+                for client in settings.get('clients', []):
+                    client['inbound_name'] = inbound.get('remark', 'Unknown')
+                    client['inbound_id'] = inbound.get('id')
+                    clients.append(client)
+            except:
+                continue
         
         return clients
     except requests.exceptions.RequestException as e:
         print(f"{Colors.RED}❌ Error fetching clients: {e}{Colors.NC}")
         return []
 
-def create_client(panel_base, token, email, total_gb, expiry_days, inbound_ids, enable=True, limit_ip=0):
-    """Create a new client in panel"""
+def create_client(panel_base, session, csrf_token, email, total_gb, expiry_days, inbound_ids, enable=True, limit_ip=0):
+    """Create a new client in panel using CSRF"""
     # Calculate expiry time in milliseconds
     if expiry_days:
         expiry_time = int((datetime.now() + timedelta(days=expiry_days)).timestamp() * 1000)
     else:
-        expiry_time = 0  # No expiry
+        expiry_time = 0
     
     payload = {
         "client": {
             "email": email,
-            "totalGB": total_gb * 1024 * 1024 * 1024,  # Convert GB to bytes
+            "totalGB": total_gb * 1024 * 1024 * 1024,
             "expiryTime": expiry_time,
             "tgId": 0,
             "limitIp": limit_ip,
@@ -153,10 +175,10 @@ def create_client(panel_base, token, email, total_gb, expiry_days, inbound_ids, 
     
     url = f"{panel_base}/panel/api/clients/add"
     try:
-        response = requests.post(
+        response = session.post(
             url,
             json=payload,
-            headers=get_headers(token),
+            headers=get_headers(csrf_token),
             verify=False,
             timeout=10
         )
@@ -166,14 +188,14 @@ def create_client(panel_base, token, email, total_gb, expiry_days, inbound_ids, 
     except requests.exceptions.RequestException as e:
         return False, str(e)
 
-def delete_client(panel_base, token, email, keep_traffic=False):
+def delete_client(panel_base, session, csrf_token, email, keep_traffic=False):
     """Delete a client by email"""
     keep = "?keepTraffic=1" if keep_traffic else ""
     url = f"{panel_base}/panel/api/clients/del/{email}{keep}"
     try:
-        response = requests.post(
+        response = session.post(
             url,
-            headers=get_headers(token),
+            headers=get_headers(csrf_token),
             verify=False,
             timeout=10
         )
@@ -183,13 +205,13 @@ def delete_client(panel_base, token, email, keep_traffic=False):
     except requests.exceptions.RequestException as e:
         return False, str(e)
 
-def reset_client_traffic(panel_base, token, email):
+def reset_client_traffic(panel_base, session, csrf_token, email):
     """Reset traffic for a client by email"""
     url = f"{panel_base}/panel/api/clients/resetTraffic/{email}"
     try:
-        response = requests.post(
+        response = session.post(
             url,
-            headers=get_headers(token),
+            headers=get_headers(csrf_token),
             verify=False,
             timeout=10
         )
@@ -199,13 +221,13 @@ def reset_client_traffic(panel_base, token, email):
     except requests.exceptions.RequestException as e:
         return False, str(e)
 
-def get_client_info(panel_base, token, email):
+def get_client_info(panel_base, session, csrf_token, email):
     """Get client info by email"""
     url = f"{panel_base}/panel/api/clients/get/{email}"
     try:
-        response = requests.get(
+        response = session.get(
             url,
-            headers=get_headers(token),
+            headers=get_headers(csrf_token),
             verify=False,
             timeout=10
         )
@@ -228,8 +250,8 @@ def display_client_info(client):
     print(f"  {Colors.BOLD}Used:{Colors.NC} {client.get('usedGB', 0) / (1024*1024*1024):.2f} GB")
     print(f"  {Colors.BOLD}IP Limit:{Colors.NC} {client.get('limitIp', 0)}")
     print(f"  {Colors.BOLD}Enabled:{Colors.NC} {'✅' if client.get('enable', True) else '❌'}")
+    print(f"  {Colors.BOLD}Inbound:{Colors.NC} {client.get('inbound_name', 'N/A')}")
     
-    # Expiry
     expiry_time = client.get('expiryTime', 0)
     if expiry_time:
         expiry_date = datetime.fromtimestamp(expiry_time / 1000)
@@ -244,8 +266,8 @@ def menu():
     if not panel_base:
         return
     
-    token = get_token(panel_base, username, password)
-    if not token:
+    session, csrf_token = get_session(panel_base, username, password)
+    if not session or not csrf_token:
         print(f"{Colors.RED}❌ Failed to authenticate. Check your panel settings.{Colors.NC}")
         return
     
@@ -273,19 +295,19 @@ def menu():
         
         elif choice == '1':
             print(f"{Colors.BLUE}📋 Fetching clients...{Colors.NC}")
-            clients = list_clients(panel_base, token)
+            clients = list_clients(panel_base, session, csrf_token)
             if not clients:
                 print(f"{Colors.YELLOW}⚠️ No clients found.{Colors.NC}")
             else:
                 print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
-                print(f"{'Email':<30} | {'UUID':<38} | {'Total GB':<10} | {'Status'}")
+                print(f"{'Email':<25} | {'UUID':<38} | {'Total GB':<10} | {'Status'}")
                 print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
                 for client in clients:
-                    email = client.get('email', 'N/A')[:30]
+                    email = client.get('email', 'N/A')[:25]
                     uuid = client.get('uuid', 'N/A')[:38]
                     total = client.get('totalGB', 0) / (1024*1024*1024)
                     status = "✅ Active" if client.get('enable', True) else "❌ Disabled"
-                    print(f"{email:<30} | {uuid:<38} | {total:<10.2f} | {status}")
+                    print(f"{email:<25} | {uuid:<38} | {total:<10.2f} | {status}")
                 print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
             input(f"{Colors.YELLOW}Press Enter to continue...{Colors.NC}")
         
@@ -324,12 +346,11 @@ def menu():
             enable = input(f"{Colors.BOLD}{Colors.PURPLE}Enable client? (Y/n): {Colors.NC}").strip().lower() != 'n'
             
             print(f"{Colors.CYAN}📋 Creating client...{Colors.NC}")
-            success, msg = create_client(panel_base, token, email, total_gb, expiry_days, inbound_ids, enable)
+            success, msg = create_client(panel_base, session, csrf_token, email, total_gb, expiry_days, inbound_ids, enable)
             
             if success:
                 print(f"{Colors.GREEN}✅ Client created successfully!{Colors.NC}")
-                # Show the client info
-                client, _ = get_client_info(panel_base, token, email)
+                client, _ = get_client_info(panel_base, session, csrf_token, email)
                 if client:
                     display_client_info(client)
             else:
@@ -344,7 +365,7 @@ def menu():
                 input(f"{Colors.YELLOW}Press Enter to continue...{Colors.NC}")
                 continue
             
-            client, success = get_client_info(panel_base, token, email)
+            client, success = get_client_info(panel_base, session, csrf_token, email)
             if success and client:
                 display_client_info(client)
             else:
@@ -359,7 +380,6 @@ def menu():
                 input(f"{Colors.YELLOW}Press Enter to continue...{Colors.NC}")
                 continue
             
-            # Confirm
             confirm = input(f"{Colors.RED}⚠️ Are you sure you want to delete '{email}'? (y/N): {Colors.NC}").strip().lower()
             if confirm != 'y':
                 print(f"{Colors.YELLOW}❌ Cancelled.{Colors.NC}")
@@ -368,7 +388,7 @@ def menu():
             
             keep_traffic = input(f"{Colors.BOLD}{Colors.PURPLE}Keep traffic records? (y/N): {Colors.NC}").strip().lower() == 'y'
             
-            success, msg = delete_client(panel_base, token, email, keep_traffic)
+            success, msg = delete_client(panel_base, session, csrf_token, email, keep_traffic)
             if success:
                 print(f"{Colors.GREEN}✅ Client '{email}' deleted successfully.{Colors.NC}")
             else:
@@ -389,7 +409,7 @@ def menu():
                 input(f"{Colors.YELLOW}Press Enter to continue...{Colors.NC}")
                 continue
             
-            success, msg = reset_client_traffic(panel_base, token, email)
+            success, msg = reset_client_traffic(panel_base, session, csrf_token, email)
             if success:
                 print(f"{Colors.GREEN}✅ Traffic reset successfully for '{email}'.{Colors.NC}")
             else:
