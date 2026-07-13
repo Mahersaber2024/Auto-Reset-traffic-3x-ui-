@@ -3,13 +3,16 @@
 
 import os
 import sys
+import re
 import subprocess
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 # ========== Settings ==========
 CONFIG_FILE = "/etc/x3-traffic-reset/config.conf"
+ENV_FILE = "/opt/x3-traffic-reset/.env"
 SERVICE_NAME = "x3-tf"
-VERSION = "2.3.2"
+VERSION = "2.4.0"
 SPONSOR_NAME = "Jade Tunnel"
 SPONSOR_LINK = "https://t.me/jadetunnell"
 # ===============================
@@ -283,6 +286,131 @@ def show_logs():
             print(f"{Colors.RED}❌ Invalid option!{Colors.NC}")
             input("Press any key to continue...")
 
+def read_env():
+    """Read .env file into a dict, preserving key order"""
+    env = {}
+    if os.path.exists(ENV_FILE):
+        with open(ENV_FILE, 'r') as f:
+            for line in f:
+                line = line.rstrip('\n')
+                if not line or line.strip().startswith('#'):
+                    continue
+                if '=' in line:
+                    key, _, value = line.partition('=')
+                    env[key.strip()] = value.strip()
+    return env
+
+def write_env(env):
+    """Write dict back to .env file, preserving a stable key order"""
+    key_order = ["PANEL_BASE", "USERNAME", "PASSWORD", "CONFIG_FILE", "LOG_FILE"]
+    # include any extra keys that might exist but aren't in key_order
+    extra_keys = [k for k in env.keys() if k not in key_order]
+    ordered_keys = key_order + extra_keys
+
+    lines = []
+    for key in ordered_keys:
+        if key in env:
+            lines.append(f"{key}={env[key]}\n")
+
+    with open(ENV_FILE, 'w') as f:
+        f.writelines(lines)
+
+def parse_panel_base(panel_base):
+    """Split PANEL_BASE URL into ip/domain, port, and base path"""
+    try:
+        parts = urlsplit(panel_base)
+        host = parts.hostname or ""
+        port = str(parts.port) if parts.port else ""
+        path = parts.path or ""
+        scheme = parts.scheme or "https"
+        return scheme, host, port, path
+    except Exception:
+        return "https", "", "", ""
+
+def build_panel_base(scheme, host, port, path):
+    """Rebuild PANEL_BASE URL from parts"""
+    netloc = host
+    if port:
+        netloc = f"{host}:{port}"
+    if path and not path.startswith('/'):
+        path = '/' + path
+    return f"{scheme}://{netloc}{path}"
+
+def edit_panel_settings():
+    """Edit the 3xUI panel connection settings stored in .env"""
+    print(f"{Colors.BLUE}⚙️  Edit Panel Settings{Colors.NC}")
+    print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
+
+    if not os.path.exists(ENV_FILE):
+        print(f"{Colors.RED}❌ .env file not found at {ENV_FILE}!{Colors.NC}")
+        return
+
+    env = read_env()
+    current_panel_base = env.get("PANEL_BASE", "")
+    current_user = env.get("USERNAME", "")
+    current_pass = env.get("PASSWORD", "")
+
+    scheme, host, port, path = parse_panel_base(current_panel_base)
+    if not port:
+        port = "2053"
+
+    print(f"{Colors.YELLOW}💡 Press Enter to keep the current value shown in [brackets].{Colors.NC}")
+    print("")
+
+    new_ip = input(f"Panel IP address or domain [{host}]: ").strip()
+    new_ip = new_ip if new_ip else host
+
+    new_port = input(f"Panel port [{port}]: ").strip()
+    new_port = new_port if new_port else port
+
+    masked_path = path if path else "(none)"
+    new_path = input(f"Web Base Path [{masked_path}]: ").strip()
+    if new_path == "":
+        new_path = path
+    elif new_path.lower() in ("none", "-", "/"):
+        new_path = ""
+
+    masked_user = current_user if current_user else "(none)"
+    new_user = input(f"Username [{masked_user}]: ").strip()
+    new_user = new_user if new_user else current_user
+
+    print(f"Password [{'*' * len(current_pass) if current_pass else '(none)'}]")
+    new_pass = input("New password (leave empty to keep current): ").strip()
+    new_pass = new_pass if new_pass else current_pass
+
+    if not new_ip or not new_user or not new_pass:
+        print(f"{Colors.RED}❌ IP/domain, username, and password cannot be empty. Aborted.{Colors.NC}")
+        return
+
+    new_panel_base = build_panel_base(scheme, new_ip, new_port, new_path)
+
+    print("")
+    print(f"{Colors.BLUE}📋 New settings summary:{Colors.NC}")
+    print(f"  Panel URL: {Colors.BOLD}{new_panel_base}{Colors.NC}")
+    print(f"  Username:  {Colors.BOLD}{new_user}{Colors.NC}")
+    print(f"  Password:  {Colors.BOLD}{'*' * len(new_pass)}{Colors.NC}")
+    print("")
+    confirm = input("Save these settings? (y/N): ").strip().lower()
+    if confirm != 'y':
+        print(f"{Colors.YELLOW}⚠️ Cancelled, no changes were made.{Colors.NC}")
+        return
+
+    env["PANEL_BASE"] = new_panel_base
+    env["USERNAME"] = new_user
+    env["PASSWORD"] = new_pass
+    env.setdefault("CONFIG_FILE", CONFIG_FILE)
+    env.setdefault("LOG_FILE", "/var/log/x3-traffic-reset.log")
+
+    write_env(env)
+    print(f"{Colors.GREEN}✅ Panel settings updated successfully!{Colors.NC}")
+
+    apply = input("Restart the service now to apply changes? (Y/n): ").strip().lower()
+    if apply != 'n':
+        subprocess.run(['sudo', 'systemctl', 'restart', f'{SERVICE_NAME}.timer'], check=False)
+        print(f"{Colors.GREEN}✅ Service restarted with new settings.{Colors.NC}")
+    else:
+        print(f"{Colors.YELLOW}💡 Remember to restart manually: sudo systemctl restart {SERVICE_NAME}.timer{Colors.NC}")
+
 def uninstall():
     """Uninstall the service"""
     print(f"{Colors.RED}⚠️ Are you sure you want to uninstall? (y/N): {Colors.NC}")
@@ -291,22 +419,6 @@ def uninstall():
         subprocess.run(['bash', '<(curl -Ls https://raw.githubusercontent.com/Mahersaber2024/Auto-Reset-traffic-3x-ui-/main/uninstall.sh)'], shell=True)
         sys.exit(0)
 
-# ========== NEW: Client Management Function ==========
-def client_management():
-    """Open client management menu via API"""
-    try:
-        # Import the client manager module
-        from client_manager import show_client_menu
-        show_client_menu()
-    except ImportError as e:
-        print(f"{Colors.RED}❌ Error: client_manager module not found!{Colors.NC}")
-        print(f"{Colors.YELLOW}💡 Please make sure client_manager.py is in the same directory.{Colors.NC}")
-        print(f"{Colors.RED}Error details: {e}{Colors.NC}")
-        input("\nPress any key to continue...")
-    except Exception as e:
-        print(f"{Colors.RED}❌ Error loading client manager: {e}{Colors.NC}")
-        input("\nPress any key to continue...")
-        
 def main():
     """Main menu loop"""
     while True:
@@ -334,7 +446,7 @@ def main():
         print(f"  {Colors.GREEN}4.{Colors.NC} ⏰ Set reset interval")
         print(f"  {Colors.GREEN}5.{Colors.NC} 🔄 Run manual traffic reset now")
         print(f"  {Colors.GREEN}6.{Colors.NC} 📋 View logs")
-        print(f"  {Colors.GREEN}7.{Colors.NC} 👤 Client Management (Create new clients via API)")  # گزینه جدید
+        print(f"  {Colors.GREEN}7.{Colors.NC} ⚙️  Edit panel settings")
         print(f"  {Colors.GREEN}8.{Colors.NC} ❌ Uninstall service")
         print(f"  {Colors.GREEN}0.{Colors.NC} 🚪 Exit")
         print(f"{Colors.CYAN}─────────────────────────────────────────────────────────────────{Colors.NC}")
@@ -354,7 +466,7 @@ def main():
         elif choice == '6':
             show_logs()
         elif choice == '7':
-            client_management()
+            edit_panel_settings()
         elif choice == '8':
             uninstall()
         elif choice == '0':
@@ -363,7 +475,7 @@ def main():
         else:
             print(f"{Colors.RED}❌ Invalid option!{Colors.NC}")
         
-        if choice not in ['0', '6', '7']:
+        if choice not in ['0', '6']:
             print("")
             print(f"{Colors.YELLOW}Press any key to continue...{Colors.NC}")
             input()
